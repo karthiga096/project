@@ -19,94 +19,114 @@ def grade(mark):
     else:
         return "D", "Fail"
 
-# ---------------- ML SUGGESTION ----------------
+# ---------------- ML PERFORMANCE ANALYSIS ----------------
 def lr_suggestion(marks):
-    X = np.array(range(1, 7)).reshape(-1, 1)
+    X = np.array(range(1, len(marks)+1)).reshape(-1, 1)
     y = np.array(marks)
     model = LinearRegression()
     model.fit(X, y)
 
     if model.coef_[0] > 0:
-        return "Performance Improving"
+        return "📈 Performance Improving"
+    elif model.coef_[0] < 0:
+        return "📉 Performance Declining"
     else:
-        return "Needs More Practice"
+        return "➖ Stable Performance"
 
 # ---------------- PDF GENERATION ----------------
-def generate_pdf(name, roll, subjects, marks):
+def generate_pdf(college, dept, sem, name, roll, subjects, marks):
     pdf = FPDF()
     pdf.add_page()
 
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "COLLEGE MARKSHEET", ln=True, align="C")
+    pdf.cell(0, 10, college, ln=True, align="C")
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 8, f"Department: {dept}", ln=True, align="C")
+    pdf.cell(0, 8, f"Semester: {sem}", ln=True, align="C")
     pdf.ln(8)
 
-    pdf.set_font("Arial", "", 12)
+    pdf.set_font("Arial", "", 11)
     pdf.cell(0, 8, f"Student Name : {name}", ln=True)
     pdf.cell(0, 8, f"Roll Number  : {roll}", ln=True)
-    pdf.ln(6)
+    pdf.ln(5)
 
     pdf.set_font("Arial", "B", 11)
     pdf.cell(40, 10, "Subject", 1)
     pdf.cell(25, 10, "Marks", 1)
     pdf.cell(25, 10, "Grade", 1)
     pdf.cell(30, 10, "Result", 1)
-    pdf.cell(70, 10, "Suggestion", 1)
+    pdf.cell(60, 10, "Remark", 1)
     pdf.ln()
 
     suggestion = lr_suggestion(marks)
 
-    for i in range(6):
+    for i in range(len(subjects)):
         g, r = grade(marks[i])
         pdf.set_font("Arial", "", 11)
         pdf.cell(40, 10, subjects[i], 1)
         pdf.cell(25, 10, str(marks[i]), 1)
         pdf.cell(25, 10, g, 1)
         pdf.cell(30, 10, r, 1)
-        pdf.cell(70, 10, suggestion, 1)
+        pdf.cell(60, 10, suggestion, 1)
         pdf.ln()
+
+    avg = sum(marks) / len(marks)
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, f"Overall Percentage: {avg:.2f}%", ln=True)
+    pdf.cell(0, 8, f"Final Result: {'PASS' if avg >= 50 else 'FAIL'}", ln=True)
 
     temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(temp.name)
-    return temp.name
+    return temp.name, avg, suggestion
 
 # ---------------- STREAMLIT UI ----------------
-st.title("🎓 Smart Marksheet Generation using ML")
+st.title("🎓 Smart College Marksheet Generator (ML Based)")
+
+college = st.text_input("College Name")
+dept = st.selectbox("Department", [
+    "CSE", "IT", "ECE", "EEE", "Mechanical", "Civil", "AI & DS"
+])
+sem = st.selectbox("Semester", [f"Semester {i}" for i in range(1, 9)])
 
 name = st.text_input("Student Name")
 roll = st.text_input("Roll Number")
 parent_mobile = st.text_input("Parent Mobile Number")
 parent_email = st.text_input("Parent Email")
 
-st.subheader("Enter Subject Marks")
+st.subheader("📘 Enter Subject Marks")
 
-subjects = ["Maths", "Science", "English", "History", "Computer", "Physics"]
+subjects = ["Subject 1", "Subject 2", "Subject 3", "Subject 4", "Subject 5", "Subject 6"]
 marks = []
 
 for sub in subjects:
-    marks.append(st.number_input(sub, min_value=0, max_value=100))
+    marks.append(st.number_input(sub, min_value=0, max_value=100, step=1))
 
 if st.button("Generate Marksheet"):
-    if name and roll and parent_mobile and parent_email:
-        pdf_path = generate_pdf(name, roll, subjects, marks)
+    if college and name and roll and parent_mobile and parent_email:
+        pdf_path, avg, insight = generate_pdf(
+            college, dept, sem, name, roll, subjects, marks
+        )
 
-        st.success("✅ Marksheet Generated Successfully")
+        st.success("✅ College Marksheet Generated Successfully")
 
-        st.subheader("📊 Marksheet Preview")
-        for i in range(6):
+        st.subheader("📊 Performance Summary")
+        st.write(f"**Overall Percentage:** {avg:.2f}%")
+        st.write(f"**ML Insight:** {insight}")
+
+        for i in range(len(subjects)):
             g, r = grade(marks[i])
-            st.write(f"{subjects[i]} → Marks: {marks[i]}, Grade: {g}, Result: {r}")
+            st.write(f"{subjects[i]} → {marks[i]} | Grade: {g} | {r}")
 
         with open(pdf_path, "rb") as f:
             st.download_button(
                 "📥 Download Marksheet PDF",
                 f,
-                file_name=f"{roll}_Marksheet.pdf",
+                file_name=f"{roll}_Sem_Marksheet.pdf",
                 mime="application/pdf"
             )
 
-        st.info(f"📧 Marksheet sent to Parent Email: {parent_email}")
-        st.info(f"📱 Marksheet sent to Parent Mobile: {parent_mobile}")
-
+        st.info(f"📧 Sent to Parent Email: {parent_email}")
+        st.info(f"📱 Sent to Parent Mobile: {parent_mobile}")
     else:
-        st.error("❌ Please fill all fields")
-
+        st.error("❌ Please fill all required fields")
