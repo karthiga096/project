@@ -6,28 +6,6 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 import tempfile
 
-# ================= ADMIN LOGIN =================
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-def login_page():
-    st.title("🔐 Admin Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-            st.session_state.logged_in = True
-            st.success("Login Successful ✅")
-            st.rerun()
-        else:
-            st.error("Invalid Credentials ❌")
-
-def logout():
-    st.session_state.logged_in = False
-    st.rerun()
 
 # ================= SUBJECT DATA =================
 dept_sem_subjects = {
