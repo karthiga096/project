@@ -6,6 +6,28 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 import tempfile
 
+# ================= ADMIN LOGIN =================
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123"
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+def login_page():
+    st.title("🔐 Admin Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
+            st.session_state.logged_in = True
+            st.success("Login Successful ✅")
+            st.experimental_rerun()  # Force reload
+        else:
+            st.error("Invalid Credentials ❌")
+
+def logout():
+    st.session_state.logged_in = False
+    st.experimental_rerun()
 
 # ================= SUBJECT DATA =================
 dept_sem_subjects = {
@@ -71,7 +93,7 @@ dept_sem_subjects = {
     }
 }
 
-# ================= CGPA CALCULATION =================
+# ================= CGPA =================
 def grade_point(m):
     if m >= 90: return 10
     elif m >= 80: return 9
@@ -83,30 +105,30 @@ def grade_point(m):
 def calculate_cgpa(marks):
     return round(sum(grade_point(m) for m in marks)/len(marks),2)
 
-# ================= PDF GENERATION =================
+# ================= PDF =================
 def generate_pdf(name, roll, dept, sem, subjects, marks, cgpa):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "COLLEGE MARKSHEET", ln=True, align="C")
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 8, f"Name: {name}", ln=True)
-    pdf.cell(0, 8, f"Roll No: {roll}", ln=True)
-    pdf.cell(0, 8, f"Department: {dept}", ln=True)
-    pdf.cell(0, 8, f"Semester: {sem}", ln=True)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"COLLEGE MARKSHEET",ln=True,align="C")
+    pdf.set_font("Arial","",12)
+    pdf.cell(0,8,f"Name: {name}",ln=True)
+    pdf.cell(0,8,f"Roll No: {roll}",ln=True)
+    pdf.cell(0,8,f"Department: {dept}",ln=True)
+    pdf.cell(0,8,f"Semester: {sem}",ln=True)
     pdf.ln(5)
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(90, 8, "Subject", 1)
-    pdf.cell(30, 8, "Marks", 1)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(90,8,"Subject",1)
+    pdf.cell(30,8,"Marks",1)
     pdf.ln()
-    pdf.set_font("Arial", "", 11)
-    for s, m in zip(subjects, marks):
-        pdf.cell(90, 8, s, 1)
-        pdf.cell(30, 8, str(m), 1)
+    pdf.set_font("Arial","",11)
+    for s,m in zip(subjects,marks):
+        pdf.cell(90,8,s,1)
+        pdf.cell(30,8,str(m),1)
         pdf.ln()
     pdf.ln(5)
-    pdf.cell(0, 8, f"CGPA: {cgpa}", ln=True)
-    temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.cell(0,8,f"CGPA: {cgpa}",ln=True)
+    temp = tempfile.NamedTemporaryFile(delete=False,suffix=".pdf")
     pdf.output(temp.name)
     return temp.name
 
@@ -114,50 +136,49 @@ def generate_pdf(name, roll, dept, sem, subjects, marks, cgpa):
 def main_app():
     st.title("🎓 Smart College Marksheet System")
     st.button("🚪 Logout", on_click=logout)
-    
+
     dept = st.selectbox("Department", dept_sem_subjects.keys())
     sem = st.selectbox("Semester", dept_sem_subjects[dept].keys())
     name = st.text_input("Student Name")
     roll = st.text_input("Roll Number")
-    
+
     subjects = dept_sem_subjects[dept][sem]
-    marks = [st.number_input(sub, 0, 100, key=sub) for sub in subjects]
-    
+    marks = [st.number_input(sub,0,100,key=sub) for sub in subjects]
+
     if "generated" not in st.session_state:
         st.session_state.generated = False
 
-    # ---------- GENERATE ----------
+    # ---------- Generate ----------
     if st.button("📊 Generate Marksheet"):
         if name and roll:
             st.session_state.cgpa = calculate_cgpa(marks)
             st.session_state.generated = True
-            fig, ax = plt.subplots()
-            ax.bar(subjects, marks)
+            fig,ax = plt.subplots()
+            ax.bar(subjects,marks)
             plt.xticks(rotation=45)
             st.pyplot(fig)
             st.success(f"CGPA: {st.session_state.cgpa}")
         else:
             st.error("Enter Name and Roll Number")
 
-    # ---------- SAVE TO EXCEL ----------
+    # ---------- Save to Excel ----------
     if st.session_state.generated and st.button("💾 Save to Excel"):
         excel_file = f"{dept}_records.xlsx"
-        record = {"Name": name, "Roll No": roll}
-        for s, m in zip(subjects, marks):
+        record = {"Name": name,"Roll No": roll}
+        for s,m in zip(subjects,marks):
             record[s] = m
         record[f"{sem} CGPA"] = st.session_state.cgpa
 
         if os.path.exists(excel_file):
             df_old = pd.read_excel(excel_file)
             df_new = pd.DataFrame([record])
-            df_final = pd.concat([df_old, df_new], ignore_index=True)
+            df_final = pd.concat([df_old,df_new],ignore_index=True)
         else:
             df_final = pd.DataFrame([record])
-
-        df_final.to_excel(excel_file, index=False)
+        df_final.to_excel(excel_file,index=False)
         st.success(f"Saved to {excel_file} ✅")
 
-    # ---------- DOWNLOAD EXCEL ----------
+    # ---------- Download Excel ----------
     excel_file = f"{dept}_records.xlsx"
     if os.path.exists(excel_file):
         st.download_button(
@@ -166,9 +187,9 @@ def main_app():
             file_name=excel_file
         )
 
-    # ---------- DOWNLOAD PDF ----------
+    # ---------- Download PDF ----------
     if st.session_state.generated:
-        pdf_path = generate_pdf(name, roll, dept, sem, subjects, marks, st.session_state.cgpa)
+        pdf_path = generate_pdf(name,roll,dept,sem,subjects,marks,st.session_state.cgpa)
         st.download_button(
             "📄 Download Marksheet PDF",
             data=open(pdf_path,"rb"),
