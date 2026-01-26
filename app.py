@@ -7,6 +7,9 @@ from fpdf import FPDF
 import tempfile
 
 # ================= ADMIN LOGIN =================
+import streamlit as st
+
+# Admin credentials
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
@@ -15,19 +18,30 @@ if "logged_in" not in st.session_state:
 
 def login_page():
     st.title("🔐 Admin Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
-            st.session_state.logged_in = True
-            st.success("Login Successful ✅")
-            st.experimental_rerun()  # Force reload
-        else:
-            st.error("Invalid Credentials ❌")
+    
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+        
+        if submitted:
+            if username.strip() == ADMIN_USERNAME and password.strip() == ADMIN_PASSWORD:
+                st.session_state.logged_in = True
+                st.success("Login Successful ✅")
+                st.experimental_rerun()  # Safe here inside form submit
+            else:
+                st.error("Invalid Credentials ❌")
 
 def logout():
     st.session_state.logged_in = False
     st.experimental_rerun()
+
+# Routing
+if st.session_state.logged_in:
+    st.title("Welcome Admin 🎓")
+    st.button("Logout", on_click=logout)
+else:
+    login_page()
 
 # ================= SUBJECT DATA =================
 dept_sem_subjects = {
