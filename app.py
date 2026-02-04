@@ -17,15 +17,6 @@ st.markdown("""
 body {
     background: linear-gradient(to right, #4facfe, #00f2fe);
 }
-.main {
-    background-color: white;
-    padding: 25px;
-    border-radius: 15px;
-}
-h1 {
-    color: #2b2d42;
-    text-align: center;
-}
 .result {
     font-size: 20px;
     font-weight: bold;
@@ -33,19 +24,15 @@ h1 {
     border-radius: 10px;
     text-align: center;
 }
-.pass {
-    background-color: #d4edda;
-    color: #155724;
-}
-.fail {
-    background-color: #f8d7da;
-    color: #721c24;
-}
+.pass { background-color: #d4edda; color: #155724; }
+.fail { background-color: #f8d7da; color: #721c24; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SUBJECT DATA ----------------
+# ---------------- SUBJECT DATA (OLD + NEW) ----------------
 dept_sem_subjects = {
+
+    # ----- EXISTING (UNCHANGED) -----
     "CSE": {
         "Semester 1": ["Maths I","Physics","C Programming","English","Graphics","Physics Lab"],
         "Semester 2": ["Maths II","Data Structures","Digital Logic","EVS","Communication","DS Lab"],
@@ -88,6 +75,29 @@ dept_sem_subjects = {
         "Semester 6": ["HV Engineering","Industrial Automation","IoT","Energy Mgmt","Elective II","Mini Project"],
         "Semester 7": ["ML for EEE","FACTS","Elective III","Seminar","Internship","Research"],
         "Semester 8": ["Project Work","Review","Elective IV","Industrial Training","Viva","Presentation"]
+    },
+
+    # ----- NEW DEPARTMENTS ADDED -----
+    "MECH": {
+        "Semester 1": ["Maths I","Physics","Engineering Mechanics","English","Graphics","Physics Lab"],
+        "Semester 2": ["Maths II","Thermodynamics","Material Science","EVS","Communication","Workshop"],
+        "Semester 3": ["Strength of Materials","Kinematics","Manufacturing","Fluid Mechanics","DS","Mech Lab"],
+        "Semester 4": ["Dynamics","Thermal Engg","Machine Design","Metrology","Probability","CAD Lab"],
+        "Semester 5": ["Heat Transfer","CNC","Mechatronics","Elective I","Automation","Lab"],
+        "Semester 6": ["Robotics","IC Engines","Power Plant","Elective II","Mini Project","Seminar"],
+        "Semester 7": ["Industrial Engg","AI for Mech","Elective III","Internship","Research","Seminar"],
+        "Semester 8": ["Project Work","Review","Elective IV","Industrial Training","Viva","Presentation"]
+    },
+
+    "CIVIL": {
+        "Semester 1": ["Maths I","Physics","Basic Civil","English","Graphics","Physics Lab"],
+        "Semester 2": ["Maths II","Surveying","Construction","EVS","Communication","Survey Lab"],
+        "Semester 3": ["Structural Analysis","Geotech","Hydrology","DS","Materials","Lab"],
+        "Semester 4": ["RCC","Steel Structures","Transportation","Environmental","Probability","Lab"],
+        "Semester 5": ["Foundation Engg","Irrigation","Elective I","GIS","Management","Lab"],
+        "Semester 6": ["Earthquake Engg","Remote Sensing","Elective II","Mini Project","Seminar","Lab"],
+        "Semester 7": ["Smart Cities","AI for Civil","Elective III","Internship","Research","Seminar"],
+        "Semester 8": ["Project Work","Review","Elective IV","Industrial Training","Viva","Presentation"]
     }
 }
 
@@ -101,47 +111,52 @@ def grade(m):
     else: return "F"
 
 def grade_point(m):
-    if m >= 90: return 10
-    elif m >= 80: return 9
-    elif m >= 70: return 8
-    elif m >= 60: return 7
-    elif m >= 50: return 6
-    else: return 0
+    return 10 if m>=90 else 9 if m>=80 else 8 if m>=70 else 7 if m>=60 else 6 if m>=50 else 0
 
 # ---------------- PDF ----------------
 def generate_pdf(name, roll, dept, sem, df, percentage, cgpa, result):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "COLLEGE MARKSHEET", ln=True, align="C")
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"COLLEGE MARKSHEET",ln=True,align="C")
 
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 8, f"Name: {name}", ln=True)
-    pdf.cell(0, 8, f"Roll No: {roll}", ln=True)
-    pdf.cell(0, 8, f"Department: {dept}", ln=True)
-    pdf.cell(0, 8, f"Semester: {sem}", ln=True)
-    pdf.ln(5)
+    pdf.set_font("Arial","",12)
+    pdf.multi_cell(0,8,f"Name: {name}\nRoll No: {roll}\nDepartment: {dept}\nSemester: {sem}\n")
+    pdf.ln(3)
 
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(70, 8, "Subject", 1)
-    pdf.cell(30, 8, "Marks", 1)
-    pdf.cell(30, 8, "Grade", 1)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(70,8,"Subject",1)
+    pdf.cell(30,8,"Marks",1)
+    pdf.cell(30,8,"Grade",1)
     pdf.ln()
 
-    pdf.set_font("Arial", "", 11)
-    for _, row in df.iterrows():
-        pdf.cell(70, 8, row["Subject"], 1)
-        pdf.cell(30, 8, str(row["Marks"]), 1)
-        pdf.cell(30, 8, row["Grade"], 1)
+    pdf.set_font("Arial","",11)
+    for _,r in df.iterrows():
+        pdf.cell(70,8,r["Subject"],1)
+        pdf.cell(30,8,str(r["Marks"]),1)
+        pdf.cell(30,8,r["Grade"],1)
         pdf.ln()
 
     pdf.ln(5)
-    pdf.cell(0, 8, f"Percentage: {percentage}%", ln=True)
-    pdf.cell(0, 8, f"CGPA: {cgpa}", ln=True)
-    pdf.cell(0, 8, f"Result: {result}", ln=True)
+    pdf.cell(0,8,f"Percentage: {percentage}% | CGPA: {cgpa} | Result: {result}",ln=True)
 
-    temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    temp = tempfile.NamedTemporaryFile(delete=False,suffix=".pdf")
     pdf.output(temp.name)
+    return temp.name
+
+# ---------------- EXCEL ----------------
+def generate_excel(name, roll, dept, sem, df, percentage, cgpa, result):
+    ex = df.copy()
+    ex["Name"] = name
+    ex["Roll No"] = roll
+    ex["Department"] = dept
+    ex["Semester"] = sem
+    ex["Percentage"] = percentage
+    ex["CGPA"] = cgpa
+    ex["Result"] = result
+
+    temp = tempfile.NamedTemporaryFile(delete=False,suffix=".xlsx")
+    ex.to_excel(temp.name,index=False)
     return temp.name
 
 # ---------------- UI ----------------
@@ -154,39 +169,18 @@ name = st.text_input("Student Name")
 roll = st.text_input("Roll Number")
 
 subjects = dept_sem_subjects[dept][sem]
-marks = [st.number_input(sub, 0, 100, key=sub) for sub in subjects]
+marks = [st.number_input(s,0,100,key=s) for s in subjects]
 
-if st.button("📊 Generate Marksheet"):
-    if name and roll:
-        grades = [grade(m) for m in marks]
-        cgpa = round(sum(grade_point(m) for m in marks) / len(marks), 2)
-        percentage = round(sum(marks) / len(marks), 2)
-        result = "PASS" if min(marks) >= 50 else "FAIL"
+if st.button("📊 Generate Marksheet") and name and roll:
+    grades = [grade(m) for m in marks]
+    cgpa = round(sum(grade_point(m) for m in marks)/len(marks),2)
+    percentage = round(sum(marks)/len(marks),2)
+    result = "PASS" if min(marks)>=50 else "FAIL"
 
-        df = pd.DataFrame({
-            "Subject": subjects,
-            "Marks": marks,
-            "Grade": grades
-        })
+    df = pd.DataFrame({"Subject":subjects,"Marks":marks,"Grade":grades})
 
-        fig, ax = plt.subplots()
-        ax.bar(subjects, marks)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+    pdf = generate_pdf(name,roll,dept,sem,df,percentage,cgpa,result)
+    excel = generate_excel(name,roll,dept,sem,df,percentage,cgpa,result)
 
-        st.table(df)
-
-        if result == "PASS":
-            st.markdown(f"<div class='result pass'>🎉 RESULT: PASS<br>CGPA: {cgpa} | Percentage: {percentage}%</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='result fail'>❌ RESULT: FAIL<br>CGPA: {cgpa} | Percentage: {percentage}%</div>", unsafe_allow_html=True)
-
-        pdf_path = generate_pdf(name, roll, dept, sem, df, percentage, cgpa, result)
-
-        st.download_button(
-            "📄 Download Marksheet PDF",
-            data=open(pdf_path, "rb"),
-            file_name=f"{roll}_marksheet.pdf"
-        )
-    else:
-        st.error("Please enter Name and Roll Number")
+    st.download_button("📄 Download PDF",open(pdf,"rb"),f"{roll}_marksheet.pdf")
+    st.download_button("📥 Download Excel",open(excel,"rb"),f"{roll}_marksheet.xlsx")
