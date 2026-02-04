@@ -8,7 +8,7 @@ import os
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Smart Marksheet Generator", page_icon="🎓")
 
-# ---------------- SUBJECT DATA (UNCHANGED) ----------------
+# ---------------- SUBJECT DATA (UNCHANGED + ADDED) ----------------
 dept_sem_subjects = {
     "CSE": {
         "Semester 1": ["Maths I","Physics","C Programming","English","Graphics","Physics Lab"],
@@ -49,6 +49,16 @@ dept_sem_subjects = {
         "Semester 6": ["HV Engineering","Industrial Automation","IoT","Energy Mgmt","Elective II","Mini Project"],
         "Semester 7": ["ML for EEE","FACTS","Elective III","Seminar","Internship","Research"],
         "Semester 8": ["Project Work","Review","Elective IV","Industrial Training","Viva","Presentation"]
+    },
+    "MECH": {
+        "Semester 1": ["Maths I","Physics","Engineering Mechanics","English","Graphics","Physics Lab"],
+        "Semester 2": ["Maths II","Thermodynamics","Material Science","EVS","Communication","Workshop"],
+        "Semester 3": ["SOM","Kinematics","Manufacturing","Fluid Mechanics","DS","Mech Lab"],
+        "Semester 4": ["Dynamics","Thermal Engg","Machine Design","Metrology","Probability","CAD Lab"],
+        "Semester 5": ["Heat Transfer","CNC","Mechatronics","Elective I","Automation","Lab"],
+        "Semester 6": ["Robotics","IC Engines","Power Plant","Elective II","Mini Project","Seminar"],
+        "Semester 7": ["Industrial Engg","AI for Mech","Elective III","Internship","Research","Seminar"],
+        "Semester 8": ["Project Work","Review","Elective IV","Industrial Training","Viva","Presentation"]
     }
 }
 
@@ -59,14 +69,45 @@ def grade(m):
 def grade_point(m):
     return 10 if m>=90 else 9 if m>=80 else 8 if m>=70 else 7 if m>=60 else 6 if m>=50 else 0
 
+# ---------------- PDF ----------------
+def generate_pdf(name, roll, dept, sem, df, cgpa, percentage, result):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"COLLEGE MARKSHEET",ln=True,align="C")
+
+    pdf.set_font("Arial","",12)
+    pdf.multi_cell(0,8,f"Name: {name}\nRoll No: {roll}\nDepartment: {dept}\nSemester: {sem}")
+    pdf.ln(3)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(80,8,"Subject",1)
+    pdf.cell(30,8,"Marks",1)
+    pdf.cell(30,8,"Grade",1)
+    pdf.ln()
+
+    pdf.set_font("Arial","",11)
+    for _,r in df.iterrows():
+        pdf.cell(80,8,r["Subject"],1)
+        pdf.cell(30,8,str(r["Marks"]),1)
+        pdf.cell(30,8,r["Grade"],1)
+        pdf.ln()
+
+    pdf.ln(4)
+    pdf.cell(0,8,f"CGPA: {cgpa} | Percentage: {percentage}% | Result: {result}",ln=True)
+
+    temp = tempfile.NamedTemporaryFile(delete=False,suffix=".pdf")
+    pdf.output(temp.name)
+    return temp.name
+
 # ---------------- SAVE TO DEPARTMENT EXCEL ----------------
-def save_department_excel(dept, data):
-    file_name = f"{dept}_records.xlsx"
-    if os.path.exists(file_name):
-        old = pd.read_excel(file_name)
-        data = pd.concat([old, data], ignore_index=True)
-    data.to_excel(file_name, index=False)
-    return file_name
+def save_dept_excel(dept, df):
+    file = f"{dept}_records.xlsx"
+    if os.path.exists(file):
+        old = pd.read_excel(file)
+        df = pd.concat([old, df], ignore_index=True)
+    df.to_excel(file, index=False)
+    return file
 
 # ---------------- UI ----------------
 st.title("🎓 Smart College Marksheet Generator")
@@ -86,36 +127,33 @@ if st.button("📊 Generate Marksheet") and name and roll:
     result = "PASS" if min(marks)>=50 else "FAIL"
 
     df = pd.DataFrame({
-        "Name": name,
-        "Roll No": roll,
-        "Department": dept,
-        "Semester": sem,
         "Subject": subjects,
         "Marks": marks,
-        "Grade": grades,
-        "CGPA": cgpa,
-        "Percentage": percentage,
-        "Result": result
+        "Grade": grades
     })
 
     # -------- PERFORMANCE GRAPH --------
-    st.subheader("📈 Performance Analysis")
-
+    st.subheader("📈 Performance Graph")
     fig, ax = plt.subplots()
     ax.bar(subjects, marks)
     ax.axhline(50, linestyle="--")
     ax.set_ylabel("Marks")
-    ax.set_title("Subject-wise Performance")
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
-    # -------- SAVE & DOWNLOAD --------
-    dept_file = save_department_excel(dept, df)
+    # -------- PDF --------
+    pdf_path = generate_pdf(name, roll, dept, sem, df, cgpa, percentage, result)
+    st.download_button("📄 Download Marksheet PDF", open(pdf_path,"rb"), f"{roll}_marksheet.pdf")
 
-    st.success(f"Data saved to {dept_file}")
+    # -------- DEPT EXCEL --------
+    excel_df = df.copy()
+    excel_df["Name"] = name
+    excel_df["Roll No"] = roll
+    excel_df["Department"] = dept
+    excel_df["Semester"] = sem
+    excel_df["CGPA"] = cgpa
+    excel_df["Percentage"] = percentage
+    excel_df["Result"] = result
 
-    st.download_button(
-        "📥 Download Department Excel",
-        open(dept_file, "rb"),
-        file_name=dept_file
-    )
+    dept_file = save_dept_excel(dept, excel_df)
+    st.download_button("📥 Download Department Excel", open(dept_file,"rb"), dept_file)
